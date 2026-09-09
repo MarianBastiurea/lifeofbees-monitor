@@ -1,34 +1,41 @@
-package main.java.com.lifeofbees.monitor;
+package com.lifeofbees.monitor;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.http.HttpClient;
+import org.springframework.stereotype.Component;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
+@Component
 public class WebsiteChecker {
 
-    public WebsiteStatus check(String url) throws IOException {
-        HttpURLConnection connection =
-                (HttpURLConnection) URI.create(url).toURL().openConnection();
+    private final HttpClient httpClient;
 
-        connection.setRequestMethod("GET");
-        connection.setConnectTimeout(5000);
-        connection.setReadTimeout(5000);
+    public WebsiteChecker() {
+        this.httpClient =HttpClient.newHttpClient();
+    }
 
-        long startTime = System.currentTimeMillis();
 
-        int statusCode = connection.getResponseCode();
+    public WebsiteStatus check(String url) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
 
-        long responseTime = System.currentTimeMillis() - startTime;
+            HttpResponse<Void> response = httpClient.send(
+                    request,
+                    HttpResponse.BodyHandlers.discarding()
+            );
 
-        boolean available = statusCode >= 200 && statusCode < 400;
+            return new WebsiteStatus(
+                    response.statusCode(),
+                    response.statusCode() >= 200 && response.statusCode() < 400
+            );
 
-        connection.disconnect();
-
-        return new WebsiteStatus(
-                url,
-                available,
-                statusCode,
-                responseTime
-        );
+        } catch (IOException | InterruptedException e) {
+            return new WebsiteStatus(0, false);
+        }
     }
 }

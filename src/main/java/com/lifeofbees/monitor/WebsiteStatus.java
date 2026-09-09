@@ -1,9 +1,7 @@
-package main.java.com.lifeofbees.monitor;
+package com.lifeofbees.monitor;
 
 public record WebsiteStatus(
-        String url,
-        boolean available,
-        int httpStatusCode,
-        long responseTimeMs
+        int statusCode,
+        boolean available
 ) {
 }
