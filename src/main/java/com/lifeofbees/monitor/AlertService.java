@@ -5,17 +5,27 @@ import org.springframework.stereotype.Service;
 @Service
 public class AlertService {
 
+    private EmailService emailService;
+
+    public AlertService(EmailService emailService) {
+        this.emailService = emailService;
+    }
+
     public void siteDown(WebsiteStatus status) {
-        System.out.println(
-                "ALERT: Website is DOWN! Status code: "
-                        + status.statusCode()
-        );
+        String subject = "ALERT: LifeOfBees website is DOWN";
+
+        String text = "The LifeOfBees website is currently unavailable.\n"
+                + "Status code: " + status.statusCode();
+
+        emailService.sendAlert(subject, text);
     }
 
     public void siteRecovered(WebsiteStatus status) {
-        System.out.println(
-                "RECOVERY: Website is back UP! Status code: "
-                        + status.statusCode()
-        );
+        String subject = "RECOVERY: LifeOfBees website is UP";
+
+        String text = "The LifeOfBees website is available again.\n"
+                + "Status code: " + status.statusCode();
+
+        emailService.sendAlert(subject, text);
     }
 }
