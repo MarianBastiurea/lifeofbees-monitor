@@ -19,17 +19,27 @@ class AlertServiceTest {
     private final WebsiteStatus recoveredStatus =
             new WebsiteStatus(200, true);
 
+    private final DiagnosticResult diagnosticResultDown=new DiagnosticResult(false,
+            "Bad Gateway - the web server cannot reach the application");
+
+    private final DiagnosticResult diagnosticResultRecovered =
+            new DiagnosticResult(
+                    true,
+                    "Website is responding normally"
+            );
+
     @Test
     void shouldSendEmailWhenWebsiteIsDown() {
 
         AlertService alertService = new AlertService(emailService);
 
-        alertService.siteDown(downStatus);
+        alertService.siteDown(downStatus, diagnosticResultDown);
 
         verify(emailService).sendAlert(
                 "ALERT: LifeOfBees website is DOWN",
                 "The LifeOfBees website is currently unavailable.\n"
-                        + "Status code: 502"
+                        + "Status code: 502\n"
+                        + "Diagnosis: Bad Gateway - the web server cannot reach the application"
         );
     }
 
@@ -38,12 +48,13 @@ class AlertServiceTest {
 
         AlertService alertService = new AlertService(emailService);
 
-        alertService.siteRecovered(recoveredStatus);
+        alertService.siteRecovered(recoveredStatus, diagnosticResultRecovered);
 
         verify(emailService).sendAlert(
                 "RECOVERY: LifeOfBees website is UP",
                 "The LifeOfBees website is available again.\n"
                         + "Status code: 200"
+                        + "Diagnosis: Website is responding normally"
         );
     }
 }

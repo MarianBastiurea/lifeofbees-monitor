@@ -41,7 +41,8 @@ class WebsiteMonitorIntegrationTest {
         verify(emailService).sendAlert(
                 "ALERT: LifeOfBees website is DOWN",
                 "The LifeOfBees website is currently unavailable.\n"
-                        + "Status code: 502"
+                        + "Status code: 502\n"
+                        + "Diagnosis: Bad Gateway - the web server cannot reach the application"
         );
     }
 }

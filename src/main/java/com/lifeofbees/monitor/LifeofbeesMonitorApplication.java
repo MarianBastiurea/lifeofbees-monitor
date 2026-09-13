@@ -16,7 +16,7 @@ public class LifeofbeesMonitorApplication {
     @Bean
     CommandLineRunner testBeans(WebsiteMonitor websiteMonitor){
         return  args->{
-            System.out.println("Web site monitor bean: "+websiteMonitor);
+            //System.out.println("Web site monitor bean: "+websiteMonitor);
         };
 
     }

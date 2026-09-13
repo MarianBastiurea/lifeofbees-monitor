@@ -12,7 +12,9 @@ class WebsiteMonitorTest {
 
         WebsiteChecker websiteChecker = mock(WebsiteChecker.class);
         AlertService   alertService=mock(AlertService.class);
-        WebsiteMonitor websiteMonitor = new WebsiteMonitor(websiteChecker,alertService);
+        DiagnosticAgent diagnosticAgent = mock(DiagnosticAgent.class);
+
+        WebsiteMonitor websiteMonitor = new WebsiteMonitor(websiteChecker,alertService,diagnosticAgent);
 
         WebsiteStatus expectedStatus = new WebsiteStatus(200, true);
 
