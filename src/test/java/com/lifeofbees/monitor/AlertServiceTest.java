@@ -53,7 +53,7 @@ class AlertServiceTest {
         verify(emailService).sendAlert(
                 "RECOVERY: LifeOfBees website is UP",
                 "The LifeOfBees website is available again.\n"
-                        + "Status code: 200"
+                        + "Status code: 200\n"
                         + "Diagnosis: Website is responding normally"
         );
     }

@@ -26,8 +26,8 @@ public class AlertService {
         String subject = "RECOVERY: LifeOfBees website is UP";
 
         String text = "The LifeOfBees website is available again.\n"
-                + "Status code: " + status.statusCode()
-                + "Diagnosis: " + diagnostic.reason();;
+                + "Status code: " + status.statusCode()+"\n"
+                + "Diagnosis: " + diagnostic.reason();
 
         emailService.sendAlert(subject, text);
     }

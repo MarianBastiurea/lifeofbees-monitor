@@ -63,4 +63,17 @@ class DiagnosticAgentTest {
                 result.reason()
         );
     }
+    @Test
+    void shouldIdentifyUnavailableWebsiteWithoutHttpResponse() {
+
+        WebsiteStatus status = new WebsiteStatus(0, false);
+
+        DiagnosticResult result = diagnosticAgent.diagnose(status);
+
+        assertFalse(result.healthy());
+        assertEquals(
+                "Website is unavailable - HTTP status 0",
+                result.reason()
+        );
+    }
 }
