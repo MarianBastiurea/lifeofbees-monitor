@@ -5,6 +5,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.times;
 
 import static org.mockito.Mockito.*;
@@ -15,6 +19,8 @@ import static org.mockito.Mockito.*;
                 "spring.task.scheduling.enabled=false"
         }
 )
+
+
 class WebsiteMonitorIntegrationTest {
 
     @Autowired
@@ -25,6 +31,9 @@ class WebsiteMonitorIntegrationTest {
 
     @MockitoBean
     private EmailService emailService;
+
+    @Autowired
+    private MonitoringEventRepository monitoringEventRepository;
 
     @Test
     void shouldSendDownAlertWhenWebsiteGoesDown() {
@@ -152,5 +161,29 @@ class WebsiteMonitorIntegrationTest {
                         + "Status code: 0\n"
                         + "Diagnosis: Website is unavailable - HTTP status 0"
         );
+    }
+
+    @Test
+    void shouldSaveMonitoringEventWhenWebsiteIsChecked() {
+
+        when(websiteChecker.check("https://lifeofbees.co.uk"))
+                .thenReturn(new WebsiteStatus(502, false));
+
+        websiteMonitor.checkWebsite();
+
+        List<MonitoringEvent> events =
+                monitoringEventRepository.findAll();
+
+        assertEquals(1, events.size());
+
+        MonitoringEvent event = events.get(0);
+
+        assertEquals(502, event.statusCode());
+        assertFalse(event.available());
+        assertEquals(
+                "Bad Gateway - the web server cannot reach the application",
+                event.diagnosis()
+        );
+        assertNotNull(event.timestamp());
     }
 }
