@@ -46,7 +46,7 @@ public class WebsiteMonitor {
 
 
     @Scheduled(cron = "${monitor.cron}")
-    public void checkWebsite() {
+    public MonitoringEvent checkWebsite() {
 
         WebsiteStatus status =
                 websiteChecker.check("https://lifeofbees.co.uk");
@@ -74,7 +74,7 @@ public class WebsiteMonitor {
                 alertService.siteDown(status, diagnostic);
             }
 
-            return;
+            return event;
         }
 
         if (lastAvailable && !status.available()) {
@@ -86,5 +86,6 @@ public class WebsiteMonitor {
         }
 
         lastAvailable = status.available();
+        return event;
     }
 }

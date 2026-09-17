@@ -1,23 +1,23 @@
 package com.lifeofbees.monitor;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
+import static org.assertj.core.api.Assertions.assertThat;
 
+@SpringBootTest
 class MonitoringEventRepositoryTest {
 
+    @Autowired
+    private MonitoringEventRepository repository;
+
     @Test
-    void shouldSaveAndReturnMonitoringEvent() {
+    void shouldSaveAndFindEvent() {
 
-        MonitoringEventRepository repository =
-                new MonitoringEventRepository();
-
-        MonitoringEventRepository monitoringEventRepository =
-                mock(MonitoringEventRepository.class);
         MonitoringEvent event = new MonitoringEvent(
                 LocalDateTime.now(),
                 502,
@@ -29,7 +29,7 @@ class MonitoringEventRepositoryTest {
 
         List<MonitoringEvent> events = repository.findAll();
 
-        assertEquals(1, events.size());
-        assertEquals(event, events.get(0));
+        assertThat(events).isNotEmpty();
+        assertThat(events).contains(event);
     }
 }
