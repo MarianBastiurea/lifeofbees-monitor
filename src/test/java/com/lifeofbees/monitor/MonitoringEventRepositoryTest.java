@@ -1,8 +1,10 @@
 package com.lifeofbees.monitor;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,6 +16,14 @@ class MonitoringEventRepositoryTest {
 
     @Autowired
     private MonitoringEventRepository repository;
+
+    @MockitoBean
+    private EmailService emailService;
+
+    @BeforeEach
+    void cleanDatabase() {
+        repository.deleteAll();
+    }
 
     @Test
     void shouldSaveAndFindEvent() {
@@ -29,7 +39,17 @@ class MonitoringEventRepositoryTest {
 
         List<MonitoringEvent> events = repository.findAll();
 
-        assertThat(events).isNotEmpty();
-        assertThat(events).contains(event);
+        assertThat(events).hasSize(1);
+
+        MonitoringEvent savedEvent = events.get(0);
+
+        assertThat(savedEvent.statusCode()).isEqualTo(event.statusCode());
+        assertThat(savedEvent.available()).isEqualTo(event.available());
+        assertThat(savedEvent.diagnosis()).isEqualTo(event.diagnosis());
+        assertThat(savedEvent.timestamp()).isEqualTo(
+                event.timestamp().withNano(
+                        (event.timestamp().getNano() / 1_000_000) * 1_000_000
+                )
+        );
     }
 }

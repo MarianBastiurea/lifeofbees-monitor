@@ -30,4 +30,14 @@ class MonitoringEventTest {
     }
 
 
+    @Test
+    void showMongoUri() {
+
+        String uri = System.getenv("MONGODB_URI");
+
+        System.out.println("=================================");
+        System.out.println("MONGODB_URI = [" + uri + "]");
+        System.out.println("=================================");
+    }
+
 }

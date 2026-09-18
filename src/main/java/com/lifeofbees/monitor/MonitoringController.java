@@ -7,6 +7,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+//va fi stearsa la sfarsit
+
+
 @RestController
 @RequestMapping("/api/monitoring")
 public class MonitoringController {
@@ -29,8 +32,4 @@ public class MonitoringController {
         return historyService.getLatestEvent();
     }
 
-    @PostMapping("/check")
-    public MonitoringEvent checkWebsite() {
-        return websiteMonitor.checkWebsite();
-    }
 }

@@ -11,23 +11,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class LifeofbeesMonitorApplication {
     public static void main(String[] args) {
 
-        System.out.println("*********************************************************************");
-        String uri = System.getenv("MONGODB_URI");
-
-        System.out.println("MONGODB_URI set: " + (uri != null));
-        System.out.println("MONGODB_URI starts correctly: "
-                + (uri != null &&
-                (uri.startsWith("mongodb://") || uri.startsWith("mongodb+srv://"))));
-
         SpringApplication.run(LifeofbeesMonitorApplication.class, args);
-    }
-
-    @Bean
-    CommandLineRunner testBeans(WebsiteMonitor websiteMonitor){
-        return  args->{
-            System.out.println("MONGODB_URI starts with: "
-                    + System.getenv("MONGODB_URI").substring(0, 14));
-        };
-
     }
 }
