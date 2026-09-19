@@ -3,77 +3,110 @@ package com.lifeofbees.monitor;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class DiagnosticAgentTest {
 
-    private final DiagnosticAgent diagnosticAgent = new DiagnosticAgent();
+    private final OpenAiDiagnosticService openAiDiagnosticService =
+            mock(OpenAiDiagnosticService.class);
+
+    private final DiagnosticAgent diagnosticAgent =
+            new DiagnosticAgent(openAiDiagnosticService);
 
     @Test
     void shouldIdentifyHealthyWebsite() {
 
         WebsiteStatus status = new WebsiteStatus(200, true);
 
-        DiagnosticResult result = diagnosticAgent.diagnose(status);
+        DiagnosticResult result =
+                diagnosticAgent.diagnose(status);
 
         assertTrue(result.healthy());
         assertEquals(
                 "Website is responding normally",
                 result.reason()
         );
+
+        verifyNoInteractions(openAiDiagnosticService);
     }
 
     @Test
-    void shouldIdentifyBadGateway() {
+    void shouldUseAiForBadGateway() {
 
         WebsiteStatus status = new WebsiteStatus(502, false);
 
-        DiagnosticResult result = diagnosticAgent.diagnose(status);
+        when(openAiDiagnosticService.diagnose(status))
+                .thenReturn("AI diagnosis for Bad Gateway");
+
+        DiagnosticResult result =
+                diagnosticAgent.diagnose(status);
 
         assertFalse(result.healthy());
         assertEquals(
-                "Bad Gateway - the web server cannot reach the application",
+                "AI diagnosis for Bad Gateway",
                 result.reason()
         );
+
+        verify(openAiDiagnosticService).diagnose(status);
     }
 
     @Test
-    void shouldIdentifyServiceUnavailable() {
+    void shouldUseAiForServiceUnavailable() {
 
         WebsiteStatus status = new WebsiteStatus(503, false);
 
-        DiagnosticResult result = diagnosticAgent.diagnose(status);
+        when(openAiDiagnosticService.diagnose(status))
+                .thenReturn("AI diagnosis for Service Unavailable");
+
+        DiagnosticResult result =
+                diagnosticAgent.diagnose(status);
 
         assertFalse(result.healthy());
         assertEquals(
-                "Service Unavailable - the application or server is unavailable",
+                "AI diagnosis for Service Unavailable",
                 result.reason()
         );
+
+        verify(openAiDiagnosticService).diagnose(status);
     }
 
     @Test
-    void shouldIdentifyGatewayTimeout() {
+    void shouldUseAiForGatewayTimeout() {
 
         WebsiteStatus status = new WebsiteStatus(504, false);
 
-        DiagnosticResult result = diagnosticAgent.diagnose(status);
+        when(openAiDiagnosticService.diagnose(status))
+                .thenReturn("AI diagnosis for Gateway Timeout");
+
+        DiagnosticResult result =
+                diagnosticAgent.diagnose(status);
 
         assertFalse(result.healthy());
         assertEquals(
-                "Gateway Timeout - the application did not respond in time",
+                "AI diagnosis for Gateway Timeout",
                 result.reason()
         );
+
+        verify(openAiDiagnosticService).diagnose(status);
     }
+
     @Test
-    void shouldIdentifyUnavailableWebsiteWithoutHttpResponse() {
+    void shouldUseAiWhenThereIsNoHttpResponse() {
 
         WebsiteStatus status = new WebsiteStatus(0, false);
 
-        DiagnosticResult result = diagnosticAgent.diagnose(status);
+        when(openAiDiagnosticService.diagnose(status))
+                .thenReturn("AI diagnosis when there is no HTTP response");
+
+        DiagnosticResult result =
+                diagnosticAgent.diagnose(status);
 
         assertFalse(result.healthy());
         assertEquals(
-                "Website is unavailable - HTTP status 0",
+                "AI diagnosis when there is no HTTP response",
                 result.reason()
         );
+
+        verify(openAiDiagnosticService).diagnose(status);
     }
 }
