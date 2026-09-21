@@ -70,6 +70,17 @@
             <version>4.64.0</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-core</artifactId>
+            <version>3.4.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-transport-httpclient5</artifactId>
+            <version>3.4.2</version>
+        </dependency>
     </dependencies>
 
     <build>
