@@ -18,17 +18,20 @@ public class OpenAiToolAgent {
     private final WebsiteCheckTool websiteCheckTool;
     private final ApplicationStatusTool applicationStatusTool;
     private final ReadApplicationLogTool readApplicationLogTool;
+    private final RestartApplicationTool restartApplicationTool;
 
     public OpenAiToolAgent(
             OpenAIClient openAIClient,
             WebsiteCheckTool websiteCheckTool,
             ApplicationStatusTool applicationStatusTool,
-            ReadApplicationLogTool readApplicationLogTool) {
+            ReadApplicationLogTool readApplicationLogTool,
+            RestartApplicationTool restartApplicationTool) {
 
         this.openAIClient = openAIClient;
         this.websiteCheckTool = websiteCheckTool;
         this.applicationStatusTool = applicationStatusTool;
         this.readApplicationLogTool = readApplicationLogTool;
+        this.restartApplicationTool = restartApplicationTool;
     }
 
     public String investigateWebsite() {
@@ -50,11 +53,25 @@ public class OpenAiToolAgent {
                                         - checkApplicationStatus: checks whether the Spring Boot
                                           application container is running.
                                         - readApplicationLog: reads the recent application logs.
+                                        - restartApplication: restarts the Spring Boot application
+                                          container.
                                         
-                                        Use the tools when necessary to investigate the problem.
+                                        Investigate the problem before attempting any repair.
                                         
-                                        After investigating, provide a short technical diagnosis.
-                                        Do not restart or modify anything yet.
+                                        Check the application status and read the application logs
+                                        when appropriate.
+                                        
+                                        Only restart the application if your investigation indicates
+                                        that restarting it could reasonably resolve the problem.
+                                        
+                                        After a restart, always check the website again.
+                                        
+                                        Do not perform any other repair action.
+                                        
+                                        At the end, provide a short report describing:
+                                        - what you found
+                                        - what action you took
+                                        - whether the website recovered
                                         """)
                                 .role(ResponseInputItem.Message.Role.USER)
                                 .build()
@@ -66,7 +83,8 @@ public class OpenAiToolAgent {
                         .model(ChatModel.GPT_5)
                         .addTool(CheckWebsite.class)
                         .addTool(CheckApplicationStatus.class)
-                        .addTool((ReadApplicationLogTool.class))
+                        .addTool((ReadApplicationLog.class))
+                        .addTool(RestartApplication.class)
                         .input(ResponseCreateParams.Input.ofResponse(inputs));
 
         var response =
@@ -139,6 +157,21 @@ public class OpenAiToolAgent {
                             )
                     );
                 }
+                if (functionCall.name().equals("RestartApplication")) {
+
+                    String result =
+                            restartApplicationTool.restartApplication();
+
+                    inputs.add(
+                            ResponseInputItem.ofFunctionCallOutput(
+                                    ResponseInputItem.FunctionCallOutput
+                                            .builder()
+                                            .callId(functionCall.callId())
+                                            .output(result)
+                                            .build()
+                            )
+                    );
+                }
             }
         }
 
@@ -196,6 +229,21 @@ public class OpenAiToolAgent {
 
         @com.fasterxml.jackson.annotation.JsonPropertyDescription(
                 "Reason why the application logs should be read."
+        )
+        public String reason;
+
+        public String execute() {
+            return null;
+        }
+    }
+
+    @JsonClassDescription(
+            "Restarts the LifeOfBees Spring Boot application container."
+    )
+    public static class RestartApplication {
+
+        @com.fasterxml.jackson.annotation.JsonPropertyDescription(
+                "Reason why the application container should be restarted."
         )
         public String reason;
 

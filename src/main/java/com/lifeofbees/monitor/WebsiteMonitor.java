@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 public class WebsiteMonitor {
 
     private final WebsiteChecker websiteChecker;
-    private final AlertService  alertService;
-    private Boolean lastAvailable=null;
+    private final AlertService alertService;
+    private Boolean lastAvailable = null;
     private final DiagnosticAgent diagnosticAgent;
     private final MonitoringEventRepository monitoringEventRepository;
 
@@ -27,6 +27,7 @@ public class WebsiteMonitor {
         this.monitoringEventRepository = monitoringEventRepository;
     }
 
+    // just for tests
     public WebsiteStatus monitor(String url) {
         return websiteChecker.check(url);
     }
@@ -42,7 +43,6 @@ public class WebsiteMonitor {
                 diagnostic.reason()
         );
     }
-
 
 
     @Scheduled(cron = "${monitor.cron}")
