@@ -1,6 +1,5 @@
 package com.lifeofbees.monitor;
 
-
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -14,17 +13,20 @@ public class WebsiteMonitor {
     private Boolean lastAvailable = null;
     private final DiagnosticAgent diagnosticAgent;
     private final MonitoringEventRepository monitoringEventRepository;
+    private final OpenAiToolAgent openAiToolAgent;
 
     public WebsiteMonitor(
             WebsiteChecker websiteChecker,
             AlertService alertService,
             DiagnosticAgent diagnosticAgent,
-            MonitoringEventRepository monitoringEventRepository) {
+            MonitoringEventRepository monitoringEventRepository,
+            OpenAiToolAgent openAiToolAgent) {
 
         this.websiteChecker = websiteChecker;
         this.alertService = alertService;
         this.diagnosticAgent = diagnosticAgent;
         this.monitoringEventRepository = monitoringEventRepository;
+        this.openAiToolAgent = openAiToolAgent;
     }
 
     // just for tests
@@ -34,16 +36,19 @@ public class WebsiteMonitor {
 
     public MonitoringEvent createEvent(
             WebsiteStatus status,
-            DiagnosticResult diagnostic) {
+            DiagnosticResult diagnostic,
+            AiInvestigationResult aiResult) {
 
         return new MonitoringEvent(
                 LocalDateTime.now(),
                 status.statusCode(),
                 status.available(),
-                diagnostic.reason()
+                diagnostic.reason(),
+                aiResult != null ? aiResult.report() : null,
+                aiResult != null && aiResult.websiteRecovered(),
+                aiResult != null ? aiResult.actions() : null
         );
     }
-
 
     @Scheduled(cron = "${monitor.cron}")
     public MonitoringEvent checkWebsite() {
@@ -51,14 +56,38 @@ public class WebsiteMonitor {
         WebsiteStatus status =
                 websiteChecker.check("https://lifeofbees.co.uk");
 
-        DiagnosticResult diagnostic =
-                diagnosticAgent.diagnose(status);
+        DiagnosticResult diagnostic;
+        AiInvestigationResult aiResult = null;
+
+        if (status.available()) {
+
+            diagnostic =
+                    diagnosticAgent.diagnose(status);
+
+        } else {
+
+            diagnostic =
+                    new DiagnosticResult(
+                            false,
+                            "Website is unavailable - AI investigation started"
+                    );
+
+            aiResult =
+                    openAiToolAgent.investigateWebsite();
+
+            System.out.println("AI INVESTIGATION:");
+            System.out.println(aiResult.report());
+
+            System.out.println(
+                    "WEBSITE RECOVERED: "
+                            + aiResult.websiteRecovered()
+            );
+        }
 
         MonitoringEvent event =
-                createEvent(status, diagnostic);
+                createEvent(status, diagnostic, aiResult);
 
         monitoringEventRepository.save(event);
-
 
         System.out.println(
                 "Website status " + event.statusCode()
@@ -89,3 +118,4 @@ public class WebsiteMonitor {
         return event;
     }
 }
+

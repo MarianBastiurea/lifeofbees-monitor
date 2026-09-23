@@ -9,32 +9,6 @@ import static org.mockito.Mockito.when;
 
 class OpenAiToolAgentTest {
 
-    /*
-    @Test
-    void shouldUseToolsAndGetDiagnosis() {
-
-        OpenAiToolAgent agent =
-                new OpenAiToolAgent(
-                        OpenAIOkHttpClient.fromEnv(),
-                        new WebsiteCheckTool(
-                                new WebsiteChecker()
-                        ),
-                        new ApplicationStatusTool(),
-                        new ReadApplicationLogTool(),
-                        new RestartApplicationTool(new DockerCommandExecutor())
-                );
-
-        String result =
-                agent.investigateWebsite();
-
-        System.out.println("AI INVESTIGATION:");
-        System.out.println(result);
-
-        assertNotNull(result);
-        assertFalse(result.isBlank());
-    }
-*/
-
     @Test
     void shouldInvestigateWebsiteAndUseAvailableTools() {
 
@@ -57,13 +31,24 @@ class OpenAiToolAgentTest {
                         restartApplicationTool
                 );
 
-        String result =
+        AiInvestigationResult result =
                 agent.investigateWebsite();
 
+        System.out.println("=================================");
         System.out.println("AI INVESTIGATION:");
-        System.out.println(result);
+        System.out.println(result.report());
+        System.out.println("---------------------------------");
+        System.out.println("WEBSITE RECOVERED: "
+                + result.websiteRecovered());
+        System.out.println("---------------------------------");
+        System.out.println("ACTIONS:");
+        result.actions().forEach(System.out::println);
+        System.out.println("=================================");
 
         assertNotNull(result);
-        assertFalse(result.isBlank());
+        assertNotNull(result.report());
+        assertFalse(result.report().isBlank());
+
+        assertNotNull(result.actions());
     }
 }

@@ -19,6 +19,7 @@ public class OpenAiToolAgent {
     private final ApplicationStatusTool applicationStatusTool;
     private final ReadApplicationLogTool readApplicationLogTool;
     private final RestartApplicationTool restartApplicationTool;
+    boolean websiteRecovered = false;
 
     public OpenAiToolAgent(
             OpenAIClient openAIClient,
@@ -34,45 +35,47 @@ public class OpenAiToolAgent {
         this.restartApplicationTool = restartApplicationTool;
     }
 
-    public String investigateWebsite() {
+    public AiInvestigationResult investigateWebsite() {
 
         List<ResponseInputItem> inputs = new ArrayList<>();
+        boolean websiteRecovered = false;
+        List<String> actions = new ArrayList<>();
 
         inputs.add(
                 ResponseInputItem.ofMessage(
                         ResponseInputItem.Message.builder()
                                 .addInputTextContent("""
-                                        Investigate the website
-                                        https://lifeofbees.co.uk.
-                                        
-                                        The website has been reported as unavailable.
-                                        
-                                        You have these tools:
-                                        
-                                        - checkWebsite: checks whether the website is responding.
-                                        - checkApplicationStatus: checks whether the Spring Boot
-                                          application container is running.
-                                        - readApplicationLog: reads the recent application logs.
-                                        - restartApplication: restarts the Spring Boot application
-                                          container.
-                                        
-                                        Investigate the problem before attempting any repair.
-                                        
-                                        Check the application status and read the application logs
-                                        when appropriate.
-                                        
-                                        Only restart the application if your investigation indicates
-                                        that restarting it could reasonably resolve the problem.
-                                        
-                                        After a restart, always check the website again.
-                                        
-                                        Do not perform any other repair action.
-                                        
-                                        At the end, provide a short report describing:
-                                        - what you found
-                                        - what action you took
-                                        - whether the website recovered
-                                        """)
+                                    Investigate the website
+                                    https://lifeofbees.co.uk.
+
+                                    The website has been reported as unavailable.
+
+                                    You have these tools:
+
+                                    - checkWebsite: checks whether the website is responding.
+                                    - checkApplicationStatus: checks whether the Spring Boot
+                                      application container is running.
+                                    - readApplicationLog: reads the recent application logs.
+                                    - restartApplication: restarts the Spring Boot application
+                                      container.
+
+                                    Investigate the problem before attempting any repair.
+
+                                    Check the application status and read the application logs
+                                    when appropriate.
+
+                                    Only restart the application if your investigation indicates
+                                    that restarting it could reasonably resolve the problem.
+
+                                    After a restart, always check the website again.
+
+                                    Do not perform any other repair action.
+
+                                    At the end, provide a short report describing:
+                                    - what you found
+                                    - what action you took
+                                    - whether the website recovered
+                                    """)
                                 .role(ResponseInputItem.Message.Role.USER)
                                 .build()
                 )
@@ -83,113 +86,141 @@ public class OpenAiToolAgent {
                         .model(ChatModel.GPT_5)
                         .addTool(CheckWebsite.class)
                         .addTool(CheckApplicationStatus.class)
-                        .addTool((ReadApplicationLog.class))
-                        .addTool(RestartApplication.class)
-                        .input(ResponseCreateParams.Input.ofResponse(inputs));
+                        .addTool(ReadApplicationLog.class)
+                        .addTool(RestartApplication.class);
 
-        var response =
-                openAIClient.responses()
-                        .create(paramsBuilder.build());
+        while (true) {
 
-        for (var item : response.output()) {
+            paramsBuilder.input(
+                    ResponseCreateParams.Input.ofResponse(inputs)
+            );
 
-            if (item.isReasoning()) {
+            var response =
+                    openAIClient.responses()
+                            .create(paramsBuilder.build());
 
-                inputs.add(
-                        ResponseInputItem.ofReasoning(
-                                item.asReasoning()
-                        )
-                );
+            boolean hasFunctionCall = false;
+
+            for (var item : response.output()) {
+
+                if (item.isReasoning()) {
+
+                    inputs.add(
+                            ResponseInputItem.ofReasoning(
+                                    item.asReasoning()
+                            )
+                    );
+                }
+
+                if (item.isFunctionCall()) {
+
+                    hasFunctionCall = true;
+
+                    ResponseFunctionToolCall functionCall =
+                            item.asFunctionCall();
+
+                    inputs.add(
+                            ResponseInputItem.ofFunctionCall(functionCall)
+                    );
+
+                    if (functionCall.name().equals("CheckWebsite")) {
+
+                        WebsiteStatus status =
+                                websiteCheckTool.checkWebsite();
+                        websiteRecovered = status.available();
+                        actions.add(
+                                "CheckWebsite: HTTP "
+                                        + status.statusCode()
+                                        + ", available="
+                                        + status.available()
+                        );
+                        inputs.add(
+                                ResponseInputItem.ofFunctionCallOutput(
+                                        ResponseInputItem.FunctionCallOutput
+                                                .builder()
+                                                .callId(functionCall.callId())
+                                                .outputAsJson(status)
+                                                .build()
+                                )
+                        );
+                    }
+
+                    if (functionCall.name().equals("CheckApplicationStatus")) {
+
+                        String status =
+                                applicationStatusTool.checkApplicationStatus();
+                        actions.add(
+                                "CheckApplicationStatus: " + status
+                        );
+                        inputs.add(
+                                ResponseInputItem.ofFunctionCallOutput(
+                                        ResponseInputItem.FunctionCallOutput
+                                                .builder()
+                                                .callId(functionCall.callId())
+                                                .output(status)
+                                                .build()
+                                )
+                        );
+                    }
+
+                    if (functionCall.name().equals("ReadApplicationLog")) {
+
+                        String logs =
+                                readApplicationLogTool.readApplicationLog();
+                        actions.add(
+                                "ReadApplicationLog: "+logs
+                        );
+                        inputs.add(
+                                ResponseInputItem.ofFunctionCallOutput(
+                                        ResponseInputItem.FunctionCallOutput
+                                                .builder()
+                                                .callId(functionCall.callId())
+                                                .output(logs)
+                                                .build()
+                                )
+                        );
+                    }
+
+                    if (functionCall.name().equals("RestartApplication")) {
+
+                        String result =
+                                restartApplicationTool.restartApplication();
+                        actions.add(
+                                "RestartApplication: " + result
+                        );
+
+                        inputs.add(
+                                ResponseInputItem.ofFunctionCallOutput(
+                                        ResponseInputItem.FunctionCallOutput
+                                                .builder()
+                                                .callId(functionCall.callId())
+                                                .output(result)
+                                                .build()
+                                )
+                        );
+                    }
+                }
             }
 
-            if (item.isFunctionCall()) {
+            if (!hasFunctionCall) {
 
-                ResponseFunctionToolCall functionCall =
-                        item.asFunctionCall();
+                String report =
+                        response.output()
+                                .stream()
+                                .flatMap(item -> item.message().stream())
+                                .flatMap(message -> message.content().stream())
+                                .flatMap(content -> content.outputText().stream())
+                                .map(outputText -> outputText.text())
+                                .reduce("", (a, b) -> a + b);
 
-                inputs.add(
-                        ResponseInputItem.ofFunctionCall(functionCall)
+
+                return new AiInvestigationResult(
+                        report,
+                        websiteRecovered,
+                        actions
                 );
-
-                if (functionCall.name().equals("CheckWebsite")) {
-
-                    WebsiteStatus status =
-                            websiteCheckTool.checkWebsite();
-
-                    inputs.add(
-                            ResponseInputItem.ofFunctionCallOutput(
-                                    ResponseInputItem.FunctionCallOutput
-                                            .builder()
-                                            .callId(functionCall.callId())
-                                            .outputAsJson(status)
-                                            .build()
-                            )
-                    );
-                }
-
-                if (functionCall.name().equals("CheckApplicationStatus")) {
-
-                    String status =
-                            applicationStatusTool.checkApplicationStatus();
-
-                    inputs.add(
-                            ResponseInputItem.ofFunctionCallOutput(
-                                    ResponseInputItem.FunctionCallOutput
-                                            .builder()
-                                            .callId(functionCall.callId())
-                                            .output(status)
-                                            .build()
-                            )
-                    );
-                }
-                if (functionCall.name().equals("ReadApplicationLog")) {
-
-                    String logs =
-                            readApplicationLogTool.readApplicationLog();
-
-                    inputs.add(
-                            ResponseInputItem.ofFunctionCallOutput(
-                                    ResponseInputItem.FunctionCallOutput
-                                            .builder()
-                                            .callId(functionCall.callId())
-                                            .output(logs)
-                                            .build()
-                            )
-                    );
-                }
-                if (functionCall.name().equals("RestartApplication")) {
-
-                    String result =
-                            restartApplicationTool.restartApplication();
-
-                    inputs.add(
-                            ResponseInputItem.ofFunctionCallOutput(
-                                    ResponseInputItem.FunctionCallOutput
-                                            .builder()
-                                            .callId(functionCall.callId())
-                                            .output(result)
-                                            .build()
-                            )
-                    );
-                }
             }
         }
-
-        paramsBuilder.input(
-                ResponseCreateParams.Input.ofResponse(inputs)
-        );
-
-        var finalResponse =
-                openAIClient.responses()
-                        .create(paramsBuilder.build());
-
-        return finalResponse.output()
-                .stream()
-                .flatMap(item -> item.message().stream())
-                .flatMap(message -> message.content().stream())
-                .flatMap(content -> content.outputText().stream())
-                .map(outputText -> outputText.text())
-                .reduce("", (a, b) -> a + b);
     }
 
     @JsonClassDescription(
@@ -205,6 +236,7 @@ public class OpenAiToolAgent {
         public WebsiteStatus execute() {
             return null;
         }
+
     }
 
     @JsonClassDescription(

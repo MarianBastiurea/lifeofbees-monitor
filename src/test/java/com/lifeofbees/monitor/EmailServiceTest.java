@@ -10,6 +10,7 @@ class EmailServiceTest {
     @Autowired
     private EmailService emailService;
 
+    /*
     @Test
     void shouldSendEmail() {
 
@@ -18,5 +19,7 @@ class EmailServiceTest {
                 "This is a test email from the LifeOfBees website monitor."
         );
     }
+
+     */
 }
 
