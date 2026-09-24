@@ -5,30 +5,64 @@ import org.springframework.stereotype.Service;
 @Service
 public class AlertService {
 
-    private EmailService emailService;
-
+    private final EmailService emailService;
 
     public AlertService(EmailService emailService) {
         this.emailService = emailService;
     }
 
-    public void siteDown(WebsiteStatus status,DiagnosticResult diagnostic) {
-        String subject = "ALERT: LifeOfBees website is DOWN";
+    public void sendDailyReport(
+            WebsiteStatus status,
+            AiInvestigationResult aiResult) {
 
-        String text = "The LifeOfBees website is currently unavailable.\n"
-                + "Status code: " + status.statusCode()+"\n"
-                + "Diagnosis: " + diagnostic.reason();
+        String subject;
 
-        emailService.sendAlert(subject, text);
-    }
+        StringBuilder text = new StringBuilder();
 
-    public void siteRecovered(WebsiteStatus status, DiagnosticResult diagnostic) {
-        String subject = "RECOVERY: LifeOfBees website is UP";
+        if (status.available()) {
 
-        String text = "The LifeOfBees website is available again.\n"
-                + "Status code: " + status.statusCode()+"\n"
-                + "Diagnosis: " + diagnostic.reason();
+            subject = "LifeOfBees daily report - SITE UP";
 
-        emailService.sendAlert(subject, text);
+            text.append("LifeOfBees website is UP.\n")
+                    .append("Status code: ")
+                    .append(status.statusCode())
+                    .append("\n");
+
+        } else {
+
+            subject = "LifeOfBees daily report - SITE DOWN";
+
+            text.append("LifeOfBees website is DOWN.\n")
+                    .append("Status code: ")
+                    .append(status.statusCode())
+                    .append("\n");
+
+            if (aiResult != null) {
+
+                text.append("\nAI INVESTIGATION:\n")
+                        .append(aiResult.report())
+                        .append("\n");
+
+                text.append("\nAI ACTIONS:\n");
+
+                if (aiResult.actions() != null) {
+                    for (String action : aiResult.actions()) {
+                        text.append("- ")
+                                .append(action)
+                                .append("\n");
+                    }
+                }
+
+                text.append("\nWEBSITE RECOVERED: ")
+                        .append(aiResult.websiteRecovered())
+                        .append("\n");
+            }
+        }
+
+        emailService.sendAlert(
+                subject,
+                text.toString()
+        );
     }
 }
+

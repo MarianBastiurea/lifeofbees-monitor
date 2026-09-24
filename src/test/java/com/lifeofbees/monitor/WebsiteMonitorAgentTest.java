@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class WebsiteMonitorAgentTest {
@@ -17,9 +17,6 @@ class WebsiteMonitorAgentTest {
 
         AlertService alertService =
                 mock(AlertService.class);
-
-        DiagnosticAgent diagnosticAgent =
-                mock(DiagnosticAgent.class);
 
         MonitoringEventRepository repository =
                 mock(MonitoringEventRepository.class);
@@ -40,9 +37,6 @@ class WebsiteMonitorAgentTest {
                 "https://lifeofbees.co.uk"
         )).thenReturn(down);
 
-        when(diagnosticAgent.diagnose(down))
-                .thenReturn(diagnostic);
-
         when(openAiToolAgent.investigateWebsite())
                 .thenReturn(
                         new AiInvestigationResult(
@@ -62,7 +56,6 @@ class WebsiteMonitorAgentTest {
                 new WebsiteMonitor(
                         websiteChecker,
                         alertService,
-                        diagnosticAgent,
                         repository,
                         openAiToolAgent
                 );
@@ -71,7 +64,7 @@ class WebsiteMonitorAgentTest {
                 monitor.checkWebsite();
 
         assertEquals(502, event.statusCode());
-        assertEquals(false, event.available());
+        assertFalse(event.available());
 
         verify(openAiToolAgent, times(1))
                 .investigateWebsite();
@@ -86,9 +79,6 @@ class WebsiteMonitorAgentTest {
         AlertService alertService =
                 mock(AlertService.class);
 
-        DiagnosticAgent diagnosticAgent =
-                mock(DiagnosticAgent.class);
-
         MonitoringEventRepository repository =
                 mock(MonitoringEventRepository.class);
 
@@ -98,18 +88,9 @@ class WebsiteMonitorAgentTest {
         WebsiteStatus up =
                 new WebsiteStatus(200, true);
 
-        DiagnosticResult diagnostic =
-                new DiagnosticResult(
-                        true,
-                        "Website is responding normally"
-                );
-
         when(websiteChecker.check(
                 "https://lifeofbees.co.uk"
         )).thenReturn(up);
-
-        when(diagnosticAgent.diagnose(up))
-                .thenReturn(diagnostic);
 
         when(repository.save(any(MonitoringEvent.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -118,7 +99,6 @@ class WebsiteMonitorAgentTest {
                 new WebsiteMonitor(
                         websiteChecker,
                         alertService,
-                        diagnosticAgent,
                         repository,
                         openAiToolAgent
                 );
@@ -127,7 +107,7 @@ class WebsiteMonitorAgentTest {
                 monitor.checkWebsite();
 
         assertEquals(200, event.statusCode());
-        assertEquals(true, event.available());
+        assertTrue(event.available());
 
         verify(openAiToolAgent, never())
                 .investigateWebsite();

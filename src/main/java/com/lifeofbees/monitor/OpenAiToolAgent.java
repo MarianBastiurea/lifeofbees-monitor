@@ -19,7 +19,6 @@ public class OpenAiToolAgent {
     private final ApplicationStatusTool applicationStatusTool;
     private final ReadApplicationLogTool readApplicationLogTool;
     private final RestartApplicationTool restartApplicationTool;
-    boolean websiteRecovered = false;
 
     public OpenAiToolAgent(
             OpenAIClient openAIClient,
@@ -40,42 +39,54 @@ public class OpenAiToolAgent {
         List<ResponseInputItem> inputs = new ArrayList<>();
         boolean websiteRecovered = false;
         List<String> actions = new ArrayList<>();
+        boolean restartPerformed = false;
+        boolean verificationRequired = false;
+
 
         inputs.add(
                 ResponseInputItem.ofMessage(
                         ResponseInputItem.Message.builder()
                                 .addInputTextContent("""
-                                    Investigate the website
-                                    https://lifeofbees.co.uk.
-
-                                    The website has been reported as unavailable.
-
-                                    You have these tools:
-
-                                    - checkWebsite: checks whether the website is responding.
-                                    - checkApplicationStatus: checks whether the Spring Boot
-                                      application container is running.
-                                    - readApplicationLog: reads the recent application logs.
-                                    - restartApplication: restarts the Spring Boot application
-                                      container.
-
-                                    Investigate the problem before attempting any repair.
-
-                                    Check the application status and read the application logs
-                                    when appropriate.
-
-                                    Only restart the application if your investigation indicates
-                                    that restarting it could reasonably resolve the problem.
-
-                                    After a restart, always check the website again.
-
-                                    Do not perform any other repair action.
-
-                                    At the end, provide a short report describing:
-                                    - what you found
-                                    - what action you took
-                                    - whether the website recovered
-                                    """)
+                                        Investigate the website
+                                        https://lifeofbees.co.uk.
+                                        
+                                        The website has been reported as unavailable.
+                                        
+                                        You have these tools:
+                                        
+                                        - checkWebsite: checks whether the website is responding.
+                                        - checkApplicationStatus: checks whether the Spring Boot
+                                          application container is running.
+                                        - readApplicationLog: reads the recent application logs.
+                                        - restartApplication: restarts the Spring Boot application
+                                          container.
+                                        
+                                        Investigate the problem before attempting any repair.
+                                        
+                                        Check the application status and read the application logs
+                                        when appropriate.
+                                        
+                                       Only restart the application if your investigation indicates
+                                       that restarting it could reasonably resolve the problem.
+                                        
+                                       You may restart the application container at most once
+                                       during this investigation.
+                                        
+                                        Never restart the application more than once.
+                                        
+                                       If you restart the application, you must check the website
+                                       again afterwards.
+                                        
+                                       After the post-restart website check, do not restart the
+                                        application again.
+                                        
+                                       Do not perform any other repair action.
+                                        
+                                        At the end, provide a short report describing:
+                                        - what you found
+                                        - what action you took
+                                        - whether the website recovered
+                                        """)
                                 .role(ResponseInputItem.Message.Role.USER)
                                 .build()
                 )
@@ -128,6 +139,9 @@ public class OpenAiToolAgent {
                         WebsiteStatus status =
                                 websiteCheckTool.checkWebsite();
                         websiteRecovered = status.available();
+                        if (restartPerformed) {
+                            verificationRequired = false;
+                        }
                         actions.add(
                                 "CheckWebsite: HTTP "
                                         + status.statusCode()
@@ -168,7 +182,7 @@ public class OpenAiToolAgent {
                         String logs =
                                 readApplicationLogTool.readApplicationLog();
                         actions.add(
-                                "ReadApplicationLog: "+logs
+                                "ReadApplicationLog: " + logs
                         );
                         inputs.add(
                                 ResponseInputItem.ofFunctionCallOutput(
@@ -183,8 +197,23 @@ public class OpenAiToolAgent {
 
                     if (functionCall.name().equals("RestartApplication")) {
 
-                        String result =
-                                restartApplicationTool.restartApplication();
+                        String result;
+
+                        if (restartPerformed) {
+
+                            result =
+                                    "Restart denied: the application has already "
+                                            + "been restarted during this investigation.";
+
+                        } else {
+
+                            result =
+                                    restartApplicationTool.restartApplication();
+
+                            restartPerformed = true;
+                            verificationRequired = true;
+                        }
+
                         actions.add(
                                 "RestartApplication: " + result
                         );
@@ -202,6 +231,40 @@ public class OpenAiToolAgent {
                 }
             }
 
+
+            if (!hasFunctionCall && verificationRequired) {
+
+                WebsiteStatus status =
+                        websiteCheckTool.checkWebsite();
+
+                websiteRecovered = status.available();
+                verificationRequired = false;
+
+                actions.add(
+                        "CheckWebsite (mandatory after restart): HTTP "
+                                + status.statusCode()
+                                + ", available="
+                                + status.available()
+                );
+
+                inputs.add(
+                        ResponseInputItem.ofMessage(
+                                ResponseInputItem.Message.builder()
+                                        .addInputTextContent(
+                                                "Mandatory website verification after restart: "
+                                                        + "HTTP status "
+                                                        + status.statusCode()
+                                                        + ", available="
+                                                        + status.available()
+                                        )
+                                        .role(ResponseInputItem.Message.Role.USER)
+                                        .build()
+                        )
+                );
+
+                continue;
+            }
+
             if (!hasFunctionCall) {
 
                 String report =
@@ -212,7 +275,6 @@ public class OpenAiToolAgent {
                                 .flatMap(content -> content.outputText().stream())
                                 .map(outputText -> outputText.text())
                                 .reduce("", (a, b) -> a + b);
-
 
                 return new AiInvestigationResult(
                         report,

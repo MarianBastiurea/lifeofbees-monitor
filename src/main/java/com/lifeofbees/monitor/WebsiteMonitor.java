@@ -10,21 +10,17 @@ public class WebsiteMonitor {
 
     private final WebsiteChecker websiteChecker;
     private final AlertService alertService;
-    private Boolean lastAvailable = null;
-    private final DiagnosticAgent diagnosticAgent;
     private final MonitoringEventRepository monitoringEventRepository;
     private final OpenAiToolAgent openAiToolAgent;
 
     public WebsiteMonitor(
             WebsiteChecker websiteChecker,
             AlertService alertService,
-            DiagnosticAgent diagnosticAgent,
             MonitoringEventRepository monitoringEventRepository,
             OpenAiToolAgent openAiToolAgent) {
 
         this.websiteChecker = websiteChecker;
         this.alertService = alertService;
-        this.diagnosticAgent = diagnosticAgent;
         this.monitoringEventRepository = monitoringEventRepository;
         this.openAiToolAgent = openAiToolAgent;
     }
@@ -36,14 +32,12 @@ public class WebsiteMonitor {
 
     public MonitoringEvent createEvent(
             WebsiteStatus status,
-            DiagnosticResult diagnostic,
             AiInvestigationResult aiResult) {
 
         return new MonitoringEvent(
                 LocalDateTime.now(),
                 status.statusCode(),
                 status.available(),
-                diagnostic.reason(),
                 aiResult != null ? aiResult.report() : null,
                 aiResult != null && aiResult.websiteRecovered(),
                 aiResult != null ? aiResult.actions() : null
@@ -56,21 +50,9 @@ public class WebsiteMonitor {
         WebsiteStatus status =
                 websiteChecker.check("https://lifeofbees.co.uk");
 
-        DiagnosticResult diagnostic;
         AiInvestigationResult aiResult = null;
 
-        if (status.available()) {
-
-            diagnostic =
-                    diagnosticAgent.diagnose(status);
-
-        } else {
-
-            diagnostic =
-                    new DiagnosticResult(
-                            false,
-                            "Website is unavailable - AI investigation started"
-                    );
+        if (!status.available()) {
 
             aiResult =
                     openAiToolAgent.investigateWebsite();
@@ -85,36 +67,20 @@ public class WebsiteMonitor {
         }
 
         MonitoringEvent event =
-                createEvent(status, diagnostic, aiResult);
+                createEvent(status, aiResult);
 
         monitoringEventRepository.save(event);
 
         System.out.println(
                 "Website status " + event.statusCode()
                         + ", available " + event.available()
-                        + ", diagnostic " + event.diagnosis()
         );
 
-        if (lastAvailable == null) {
+        alertService.sendDailyReport(
+                status,
+                aiResult
+        );
 
-            lastAvailable = status.available();
-
-            if (!status.available()) {
-                alertService.siteDown(status, diagnostic);
-            }
-
-            return event;
-        }
-
-        if (lastAvailable && !status.available()) {
-            alertService.siteDown(status, diagnostic);
-        }
-
-        if (!lastAvailable && status.available()) {
-            alertService.siteRecovered(status, diagnostic);
-        }
-
-        lastAvailable = status.available();
         return event;
     }
 }

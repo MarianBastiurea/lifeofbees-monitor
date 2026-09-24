@@ -5,18 +5,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import static org.mockito.Mockito.times;
+
+import java.util.List;
 
 import static org.mockito.Mockito.*;
 
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-@SpringBootTest(
-        properties = {
-                "spring.task.scheduling.enabled=false"
-        }
-)
-
-
+@SpringBootTest(properties = {"spring.task.scheduling.enabled=false",
+                "spring.autoconfigure.exclude=" +
+                "org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration"})
 class WebsiteMonitorIntegrationTest {
 
     @Autowired
@@ -31,135 +28,122 @@ class WebsiteMonitorIntegrationTest {
     @MockitoBean
     private MonitoringEventRepository monitoringEventRepository;
 
-/*
+    @MockitoBean
+    private OpenAiToolAgent openAiToolAgent;
+
 
     @Test
-    void shouldSendDownAlertWhenWebsiteGoesDown() {
+    void shouldSendDailyReportWhenWebsiteIsUp() {
 
-        // Website is initially UP
         when(websiteChecker.check("https://lifeofbees.co.uk"))
                 .thenReturn(new WebsiteStatus(200, true));
 
         websiteMonitor.checkWebsite();
 
-        // Website then goes DOWN
-        when(websiteChecker.check("https://lifeofbees.co.uk"))
-                .thenReturn(new WebsiteStatus(502, false));
+        verify(openAiToolAgent, never())
+                .investigateWebsite();
 
-        websiteMonitor.checkWebsite();
-
-        verify(emailService).sendAlert(
-                "ALERT: LifeOfBees website is DOWN",
-                "The LifeOfBees website is currently unavailable.\n"
-                        + "Status code: 502\n"
-                        + "Diagnosis: Bad Gateway - the web server cannot reach the application"
-        );
-    }
-
-    @Test
-    void shouldSendRecoveryAlertWhenWebsiteComesBackUp() {// Website is initially DOWN
-        when(websiteChecker.check("https://lifeofbees.co.uk"))
-                .thenReturn(new WebsiteStatus(502, false));
-
-        websiteMonitor.checkWebsite();
-
-        // Website then comes back UP
-        when(websiteChecker.check("https://lifeofbees.co.uk"))
-                .thenReturn(new WebsiteStatus(200, true));
-
-        websiteMonitor.checkWebsite();
+        verify(monitoringEventRepository)
+                .save(any(MonitoringEvent.class));
 
         verify(emailService).sendAlert(
-                "RECOVERY: LifeOfBees website is UP",
-                "The LifeOfBees website is available again.\n"
+                "LifeOfBees daily report - SITE UP",
+                "LifeOfBees website is UP.\n"
                         + "Status code: 200\n"
-                        + "Diagnosis: Website is responding normally"
         );
     }
 
+
     @Test
-    void shouldSendDownAlertWhenWebsiteIsAlreadyDownAtStartup() {
+    void shouldInvestigateAndSendReportWhenWebsiteIsDown() {
+
+        WebsiteStatus downStatus =
+                new WebsiteStatus(502, false);
+
+        AiInvestigationResult aiResult =
+                new AiInvestigationResult(
+                        "AI investigated the application and restarted the container. Website recovered.",
+                        true,
+                        List.of(
+                                "CheckApplicationStatus: Container 'spring-boot-app-new' status: exited",
+                                "ReadApplicationLog: recent application logs read",
+                                "RestartApplication: Container 'spring-boot-app-new' restarted successfully.",
+                                "CheckWebsite: HTTP 200, available=true"
+                        )
+                );
 
         when(websiteChecker.check("https://lifeofbees.co.uk"))
-                .thenReturn(new WebsiteStatus(502, false));
+                .thenReturn(downStatus);
+
+        when(openAiToolAgent.investigateWebsite())
+                .thenReturn(aiResult);
 
         websiteMonitor.checkWebsite();
+
+        verify(openAiToolAgent)
+                .investigateWebsite();
+
+        verify(monitoringEventRepository)
+                .save(any(MonitoringEvent.class));
 
         verify(emailService).sendAlert(
-                "ALERT: LifeOfBees website is DOWN",
-                "The LifeOfBees website is currently unavailable.\n"
+                "LifeOfBees daily report - SITE DOWN",
+                "LifeOfBees website is DOWN.\n"
                         + "Status code: 502\n"
-                        + "Diagnosis: Bad Gateway - the web server cannot reach the application"
+                        + "\nAI INVESTIGATION:\n"
+                        + "AI investigated the application and restarted the container. Website recovered.\n"
+                        + "\nAI ACTIONS:\n"
+                        + "- CheckApplicationStatus: Container 'spring-boot-app-new' status: exited\n"
+                        + "- ReadApplicationLog: recent application logs read\n"
+                        + "- RestartApplication: Container 'spring-boot-app-new' restarted successfully.\n"
+                        + "- CheckWebsite: HTTP 200, available=true\n"
+                        + "\nWEBSITE RECOVERED: true\n"
         );
     }
 
-    @Test
-    void shouldNotSendRepeatedDownAlerts() {
-
-        // Website is initially UP
-        when(websiteChecker.check("https://lifeofbees.co.uk"))
-                .thenReturn(new WebsiteStatus(200, true));
-
-        websiteMonitor.checkWebsite();
-
-        // Website goes DOWN
-        when(websiteChecker.check("https://lifeofbees.co.uk"))
-                .thenReturn(new WebsiteStatus(502, false));
-
-        websiteMonitor.checkWebsite();
-
-        // Website is still DOWN
-        websiteMonitor.checkWebsite();
-
-        // Only one alert should have been sent
-        verify(emailService, times(1)).sendAlert(
-                "ALERT: LifeOfBees website is DOWN",
-                "The LifeOfBees website is currently unavailable.\n"
-                        + "Status code: 502\n"
-                        + "Diagnosis: Bad Gateway - the web server cannot reach the application"
-        );
-    }
-    @Test
-    void shouldNotSendRepeatedRecoveryAlerts() {
-
-        // Website is initially DOWN
-        when(websiteChecker.check("https://lifeofbees.co.uk"))
-                .thenReturn(new WebsiteStatus(502, false));
-
-        websiteMonitor.checkWebsite();
-
-        // Website comes back UP
-        when(websiteChecker.check("https://lifeofbees.co.uk"))
-                .thenReturn(new WebsiteStatus(200, true));
-
-        websiteMonitor.checkWebsite();
-
-        // Website is still UP
-        websiteMonitor.checkWebsite();
-
-        verify(emailService, times(1)).sendAlert(
-                "RECOVERY: LifeOfBees website is UP",
-                "The LifeOfBees website is available again.\n"
-                        + "Status code: 200\n"
-                        + "Diagnosis: Website is responding normally"
-        );
-    }
 
     @Test
-    void shouldSendDownAlertWhenWebsiteCannotBeReached() {
+    void shouldSaveDownEventWhenWebsiteCannotBeReached() {
+
+        WebsiteStatus downStatus =
+                new WebsiteStatus(0, false);
+
+        AiInvestigationResult aiResult =
+                new AiInvestigationResult(
+                        "AI could not recover the website.",
+                        false,
+                        List.of(
+                                "CheckApplicationStatus: application unavailable",
+                                "ReadApplicationLog: application logs checked"
+                        )
+                );
 
         when(websiteChecker.check("https://lifeofbees.co.uk"))
-                .thenReturn(new WebsiteStatus(0, false));
+                .thenReturn(downStatus);
+
+        when(openAiToolAgent.investigateWebsite())
+                .thenReturn(aiResult);
 
         websiteMonitor.checkWebsite();
+
+        verify(openAiToolAgent)
+                .investigateWebsite();
+
+        verify(monitoringEventRepository)
+                .save(any(MonitoringEvent.class));
 
         verify(emailService).sendAlert(
-                "ALERT: LifeOfBees website is DOWN",
-                "The LifeOfBees website is currently unavailable.\n"
+                "LifeOfBees daily report - SITE DOWN",
+                "LifeOfBees website is DOWN.\n"
                         + "Status code: 0\n"
-                        + "Diagnosis: Website is unavailable - HTTP status 0"
+                        + "\nAI INVESTIGATION:\n"
+                        + "AI could not recover the website.\n"
+                        + "\nAI ACTIONS:\n"
+                        + "- CheckApplicationStatus: application unavailable\n"
+                        + "- ReadApplicationLog: application logs checked\n"
+                        + "\nWEBSITE RECOVERED: false\n"
         );
     }
 
- */
+
 }

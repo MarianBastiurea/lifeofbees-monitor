@@ -7,7 +7,6 @@ public record MonitoringEvent(
         LocalDateTime timestamp,
         int statusCode,
         boolean available,
-        String diagnosis,
         String aiReport,
         boolean websiteRecovered,
         List<String> aiActions

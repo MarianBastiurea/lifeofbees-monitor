@@ -24,7 +24,6 @@ class WebsiteMonitorTest {
                 new WebsiteMonitor(
                         websiteChecker,
                         alertService,
-                        diagnosticAgent,
                         monitoringEventRepository,
                         openAiToolAgent
                 );
@@ -49,7 +48,6 @@ class WebsiteMonitorTest {
 
         WebsiteChecker websiteChecker = mock(WebsiteChecker.class);
         AlertService alertService = mock(AlertService.class);
-        DiagnosticAgent diagnosticAgent = mock(DiagnosticAgent.class);
         MonitoringEventRepository monitoringEventRepository =
                 mock(MonitoringEventRepository.class);
         OpenAiToolAgent openAiToolAgent =
@@ -59,19 +57,12 @@ class WebsiteMonitorTest {
                 new WebsiteMonitor(
                         websiteChecker,
                         alertService,
-                        diagnosticAgent,
                         monitoringEventRepository,
                         openAiToolAgent
                 );
 
         WebsiteStatus status =
                 new WebsiteStatus(502, false);
-
-        DiagnosticResult diagnostic =
-                new DiagnosticResult(
-                        false,
-                        "Bad Gateway - the web server cannot reach the application"
-                );
 
         AiInvestigationResult aiResult =
                 new AiInvestigationResult(
@@ -85,23 +76,14 @@ class WebsiteMonitorTest {
                         )
                 );
 
-        when(diagnosticAgent.diagnose(status))
-                .thenReturn(diagnostic);
-
         MonitoringEvent event =
                 websiteMonitor.createEvent(
                         status,
-                        diagnostic,
                         aiResult
                 );
 
         assertEquals(502, event.statusCode());
         assertFalse(event.available());
-
-        assertEquals(
-                "Bad Gateway - the web server cannot reach the application",
-                event.diagnosis()
-        );
 
         assertEquals(
                 "AI investigated the application and restarted the container. Website recovered.",
@@ -110,6 +92,12 @@ class WebsiteMonitorTest {
 
         assertTrue(event.websiteRecovered());
 
+        assertEquals(
+                aiResult.actions(),
+                event.aiActions()
+        );
+
         assertNotNull(event.timestamp());
     }
+
 }
