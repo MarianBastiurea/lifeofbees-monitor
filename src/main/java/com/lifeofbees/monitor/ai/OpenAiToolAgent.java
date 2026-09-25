@@ -1,16 +1,17 @@
 package com.lifeofbees.monitor.ai;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
+import com.lifeofbees.monitor.monitoring.WebsiteStatus;
 import com.lifeofbees.monitor.tool.ApplicationStatusTool;
 import com.lifeofbees.monitor.tool.ReadApplicationLogTool;
 import com.lifeofbees.monitor.tool.RestartApplicationTool;
 import com.lifeofbees.monitor.tool.WebsiteCheckTool;
-import com.lifeofbees.monitor.monitoring.WebsiteStatus;
 import com.openai.client.OpenAIClient;
 import com.openai.models.ChatModel;
 import com.openai.models.responses.ResponseCreateParams;
 import com.openai.models.responses.ResponseFunctionToolCall;
 import com.openai.models.responses.ResponseInputItem;
+import com.openai.models.responses.ResponseOutputText;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -52,45 +53,45 @@ public class OpenAiToolAgent {
                 ResponseInputItem.ofMessage(
                         ResponseInputItem.Message.builder()
                                 .addInputTextContent("""
-                                        Investigate the website
-                                        https://lifeofbees.co.uk.
+                                         Investigate the website
+                                         https://lifeofbees.co.uk.
                                         
-                                        The website has been reported as unavailable.
+                                         The website has been reported as unavailable.
                                         
-                                        You have these tools:
+                                         You have these tools:
                                         
-                                        - checkWebsite: checks whether the website is responding.
-                                        - checkApplicationStatus: checks whether the Spring Boot
-                                          application container is running.
-                                        - readApplicationLog: reads the recent application logs.
-                                        - restartApplication: restarts the Spring Boot application
-                                          container.
+                                         - checkWebsite: checks whether the website is responding.
+                                         - checkApplicationStatus: checks whether the Spring Boot
+                                           application container is running.
+                                         - readApplicationLog: reads the recent application logs.
+                                         - restartApplication: restarts the Spring Boot application
+                                           container.
                                         
-                                        Investigate the problem before attempting any repair.
+                                         Investigate the problem before attempting any repair.
                                         
-                                        Check the application status and read the application logs
-                                        when appropriate.
+                                         Check the application status and read the application logs
+                                         when appropriate.
                                         
-                                       Only restart the application if your investigation indicates
-                                       that restarting it could reasonably resolve the problem.
+                                        Only restart the application if your investigation indicates
+                                        that restarting it could reasonably resolve the problem.
                                         
-                                       You may restart the application container at most once
-                                       during this investigation.
+                                        You may restart the application container at most once
+                                        during this investigation.
                                         
-                                        Never restart the application more than once.
+                                         Never restart the application more than once.
                                         
-                                       If you restart the application, you must check the website
-                                       again afterwards.
+                                        If you restart the application, you must check the website
+                                        again afterwards.
                                         
-                                       After the post-restart website check, do not restart the
-                                        application again.
+                                        After the post-restart website check, do not restart the
+                                         application again.
                                         
-                                       Do not perform any other repair action.
+                                        Do not perform any other repair action.
                                         
-                                        At the end, provide a short report describing:
-                                        - what you found
-                                        - what action you took
-                                        - whether the website recovered
+                                         At the end, provide a short report describing:
+                                         - what you found
+                                         - what action you took
+                                         - whether the website recovered
                                         """)
                                 .role(ResponseInputItem.Message.Role.USER)
                                 .build()
@@ -278,7 +279,7 @@ public class OpenAiToolAgent {
                                 .flatMap(item -> item.message().stream())
                                 .flatMap(message -> message.content().stream())
                                 .flatMap(content -> content.outputText().stream())
-                                .map(outputText -> outputText.text())
+                                .map(ResponseOutputText::text)
                                 .reduce("", (a, b) -> a + b);
 
                 return new AiInvestigationResult(

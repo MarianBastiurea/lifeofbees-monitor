@@ -1,11 +1,11 @@
 package com.lifeofbees.monitor.ai;
 
+import com.lifeofbees.monitor.monitoring.WebsiteChecker;
+import com.lifeofbees.monitor.monitoring.WebsiteStatus;
 import com.lifeofbees.monitor.tool.ApplicationStatusTool;
 import com.lifeofbees.monitor.tool.ReadApplicationLogTool;
 import com.lifeofbees.monitor.tool.RestartApplicationTool;
 import com.lifeofbees.monitor.tool.WebsiteCheckTool;
-import com.lifeofbees.monitor.monitoring.WebsiteChecker;
-import com.lifeofbees.monitor.monitoring.WebsiteStatus;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import org.junit.jupiter.api.Test;
 

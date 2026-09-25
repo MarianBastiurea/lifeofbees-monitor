@@ -4,7 +4,8 @@ import com.lifeofbees.monitor.monitoring.WebsiteStatus;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class OpenAiDiagnosticServiceTest {
 

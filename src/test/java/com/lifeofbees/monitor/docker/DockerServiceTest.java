@@ -1,10 +1,14 @@
 package com.lifeofbees.monitor.docker;
 
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
 class DockerServiceTest {
 
     private final DockerService dockerService =
             new DockerService();
-/*
+
     @Test
     void shouldReturnContainerStatusMessage() {
 
@@ -16,5 +20,5 @@ class DockerServiceTest {
         assertTrue(result.contains("spring-boot-app-new"));
     }
 
- */
+
 }

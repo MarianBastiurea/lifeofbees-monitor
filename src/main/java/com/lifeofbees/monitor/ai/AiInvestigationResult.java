@@ -6,4 +6,5 @@ public record AiInvestigationResult(
         String report,
         boolean websiteRecovered,
         List<String> actions
-) {}
+) {
+}

@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
 
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @SpringBootTest(properties = {"spring.task.scheduling.enabled=false",
-                "spring.autoconfigure.exclude=" +
+        "spring.autoconfigure.exclude=" +
                 "org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration"})
 class WebsiteMonitorIntegrationTest {
 

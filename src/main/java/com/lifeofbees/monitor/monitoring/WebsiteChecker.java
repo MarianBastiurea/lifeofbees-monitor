@@ -1,10 +1,10 @@
 package com.lifeofbees.monitor.monitoring;
 
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
-
-import org.springframework.stereotype.Component;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
@@ -14,7 +14,7 @@ public class WebsiteChecker {
     private final HttpClient httpClient;
 
     public WebsiteChecker() {
-        this.httpClient =HttpClient.newHttpClient();
+        this.httpClient = HttpClient.newHttpClient();
     }
 
 

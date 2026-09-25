@@ -1,7 +1,7 @@
 package com.lifeofbees.monitor.alert;
 
-import com.lifeofbees.monitor.email.EmailService;
 import com.lifeofbees.monitor.ai.AiInvestigationResult;
+import com.lifeofbees.monitor.email.EmailService;
 import com.lifeofbees.monitor.monitoring.WebsiteStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
