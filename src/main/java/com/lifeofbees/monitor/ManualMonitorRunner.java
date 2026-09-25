@@ -1,5 +1,7 @@
 package com.lifeofbees.monitor;
 
+import com.lifeofbees.monitor.monitoring.WebsiteMonitor;
+import com.lifeofbees.monitor.persistence.MonitoringEvent;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
