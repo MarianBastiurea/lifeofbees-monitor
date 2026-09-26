@@ -42,14 +42,12 @@ The application therefore combines traditional website monitoring with AI-assist
 
 * Java
 * Spring Boot
-* Maven
 
 ### Java Technologies
 
 * Java HTTP Client
 * Java records
 * Java collections
-* Java concurrency APIs where appropriate
 
 ### Spring Technologies
 
@@ -60,7 +58,6 @@ The application therefore combines traditional website monitoring with AI-assist
 
 ### Database
 
-* MongoDB
 * MongoDB Atlas
 
 ### AI
@@ -148,7 +145,6 @@ This project demonstrates practical use of:
 * Spring Boot
 * REST/HTTP communication
 * MongoDB
-* AWS/cloud-oriented development
 * AI integration
 * automated monitoring
 * unit testing
